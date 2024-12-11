@@ -10,6 +10,8 @@
 
 #define MAX_PENDING 50
 #define RECEIVE_BUFFER_SIZE 1024
+const int SEND_BUFFER_SIZE = 8 * (1 << 10); // 8KB
+
 const int MAX_BUFFER_SIZE = 1 << 12;
 
 int serverNumber = 0;

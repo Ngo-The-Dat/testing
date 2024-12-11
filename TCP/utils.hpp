@@ -26,7 +26,7 @@ const int MAX_BUFFER_SIZE = 1 << 12;
 
 using namespace std;
 
-char* getFile(std::string filename, int off_begin, int len) {
+char* get_file(std::string filename, int off_begin, int len) {
     const std::string filePath = "Files/" + filename;
     ifstream file;
     file.open(filePath.c_str(), ios::binary | ios::in);
@@ -43,3 +43,6 @@ char* getFile(std::string filename, int off_begin, int len) {
     return ret;
 }
 
+std::vector <char> serve_file(std::string filename) {
+    
+}
