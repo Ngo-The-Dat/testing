@@ -3,8 +3,11 @@
 
 **Build:**
 ```
-cd ./TCP
+cd ./TCP-Redo
 ./build all
+
+// or ./build client
+// or ./build server
 ```
 
 **Run server:**
