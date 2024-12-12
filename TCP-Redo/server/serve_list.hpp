@@ -140,3 +140,7 @@ void get_file_to_download(SOCKET client_socket) {
     std::cout << "downloading " << client_wants << '\n';
     serve_file(client_socket, path, client_wants);
 }
+
+void get_file_chunk(SOCKET client_socket) {
+    
+}
