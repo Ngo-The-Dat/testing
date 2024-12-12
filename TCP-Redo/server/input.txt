@@ -1,0 +1,3 @@
+file1.txt 9
+image.png 51192
+image2.png 64270

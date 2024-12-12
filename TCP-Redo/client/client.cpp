@@ -3,14 +3,15 @@
 #include <winsock2.h>
 #include <stdexcept>
 #include <memory>
-#include "../protocols.hpp"
+#include <map>
+#include "receive_file.hpp"
+#include "../message.hpp"
 // Winsock library
 #pragma comment(lib, "ws2_32.lib")
 
-#define RECEIVE_BUFFER_SIZE 1000
-
 class Client {
 public:
+
     Client(const std::string& serverIp, unsigned short serverPort)
         : serverIp(serverIp), serverPort(serverPort), socketHandle(INVALID_SOCKET) {}
 
@@ -47,46 +48,45 @@ public:
 
     void run() {
         std::string message;
-        char buffer[RECEIVE_BUFFER_SIZE];
+        char buffer[RECIEVE_BUFFER_SIZE];
+        char sendBuffer[SEND_BUFFER_SIZE];
 
-        do {
-            int bytesReceived = recv(socketHandle, buffer, RECEIVE_BUFFER_SIZE, 0);
-            std::cout << "i take it\n";
-            if (bytesReceived == SOCKET_ERROR) {
-                throw std::runtime_error("Failed to receive message: " + std::to_string(WSAGetLastError()));
-            }
+        
+        int bytesReceived = recv(socketHandle, buffer, RECIEVE_BUFFER_SIZE, 0);
+        std::cout << bytesReceived << '\n';
+        
+        if (bytesReceived == SOCKET_ERROR) {
+            throw std::runtime_error("Failed to receive message: " + std::to_string(WSAGetLastError()));
+        }   
 
+        if (bytesReceived != sizeof(short_message)) {
+            throw std::runtime_error("fail protocol");
+        }
 
+        for (int i = 0; i < bytesReceived; i ++) cout << (int) buffer[i] << ' ';
+        cout << '\n';
 
-            buffer[bytesReceived] = '\0';
-            std::cout << "[Server]: " << buffer;
-
-            std::cout << "[You]: ";
-            std::cin >> message;
-            Message* sendMessage = NULL;
+        short_message wellcome;
+        bool ok = copy_buffer_to_message(buffer, bytesReceived, wellcome);
+        if (!ok) {
             
+            std::cout << "not ok\n";
+            throw std::runtime_error("not ok get server wellcome");
+        }
+        std::cout << "[Server]: " << wellcome.len << ' ' << get_content_short(wellcome) << '\n';
+        std::cout << "--- end wellcome ---\n";
+        do {
+
+            std::cout << "Command: [list] or [download] (ex: list)\n";
+            std::cout << "[Choice]: ";
+            getline(cin, message);
             if (message == "list") {
-                sendMessage = new RequestList("input.txt", 9);
-            } else if (message == "download") {
-                sendMessage = new RequestChunk("testfile.txt", 200, 200);
-            } else {
-                sendMessage = new Message();
+                get_file_list(socketHandle);
             }
 
-            std::vector <char> data = sendMessage->get_send_message();
-            char* sendBuffer = new char[data.size() + 1];
-            for (int i = 0; i < data.size(); i ++) sendBuffer[i] = data[i];
-            sendBuffer[data.size()] = '\0';
-            std::cout << "sending...\n";
-            if (send(socketHandle, sendBuffer, static_cast<int>(data.size()), 0) == SOCKET_ERROR) {
-                throw std::runtime_error("Failed to send message: " + std::to_string(WSAGetLastError()));
-                std::cout << "shit\n";
+            if (message == "download") {
+                handle_download(socketHandle);
             }
-
-            std::cout << "message sent\n";
-            delete sendMessage;
-            delete[] sendBuffer;
-
         } while (message != "QUIT");
     }
 

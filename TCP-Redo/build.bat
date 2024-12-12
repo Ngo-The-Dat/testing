@@ -2,6 +2,7 @@
 
 :: Compiler
 set CC=g++
+set CSC=-std=c++17
 
 :: Default IP and port
 set ip=127.0.0.1
@@ -18,7 +19,7 @@ if "%1"=="all" (
 if "%1"=="client" (
     echo Compiling client...
     cd client
-    %CC% client.cpp -lws2_32 -o client.exe
+    %CC% client.cpp -lws2_32  %CSC% -o client.exe
     if errorlevel 1 exit /b 1
     echo Client compiled successfully.
     cd ..
@@ -29,7 +30,8 @@ if "%1"=="client" (
 if "%1"=="server" (
     echo Compiling server...
     cd server
-    %CC% server.cpp -lws2_32 -o server.exe
+    %CC% server.cpp -lws2_32 %CSC% -o server.exe
+    python reset_input.py
     if errorlevel 1 exit /b 1
     echo Server compiled successfully.
     cd ..

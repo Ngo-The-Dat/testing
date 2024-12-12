@@ -4,17 +4,15 @@
 #include <winsock2.h>
 #include <thread>
 #include <cstdlib>
-#include "../protocols.hpp"
+
+#include "../message.hpp"
+#include "serve_list.hpp"
+
 // Winsock library
 #pragma comment(lib, "ws2_32.lib")
 
-#define MAX_PENDING 50
-#define RECEIVE_BUFFER_SIZE 1024
-const int SEND_BUFFER_SIZE = 8 * (1 << 10); // 8KB
-
-const int MAX_BUFFER_SIZE = 1 << 12;
-
 int serverNumber = 0;
+#define MAX_PENDING 10
 
 void error(const std::string &message)
 {
@@ -31,39 +29,47 @@ void close_socket(SOCKET so)
 
 void handle_client(SOCKET client_socket, int clientId)
 {
-    char buffer[RECEIVE_BUFFER_SIZE];
+    char buffer[RECIEVE_BUFFER_SIZE];
+    char sendBuffer[SEND_BUFFER_SIZE];
+
     std::string message = "Welcome to the server! you are " + std::to_string(clientId) + '\n';
     int receive_message_size;
 
-    // Send welcome message
-    send(client_socket, message.c_str(), message.length() + 1, 0);
 
-    while (message != "QUIT")
+    // only short message allowed here
+    short_message wellcome = make_short_message(message);
+    char* data = reinterpret_cast<char*>(&wellcome);
+    if (send(client_socket, data, sizeof(short_message), 0) == SOCKET_ERROR) {
+        throw std::runtime_error("Failed to send message: " + std::to_string(WSAGetLastError()));
+    }
+    
+    while (true)
     {
-        receive_message_size = recv(client_socket, buffer, RECEIVE_BUFFER_SIZE, 0);
-        message = buffer;
+        // only short message allowed here
+        receive_message_size = recv(client_socket, buffer, RECIEVE_BUFFER_SIZE, 0);
         if (receive_message_size < 0) {
-            std::cout << receive_message_size << '\n';
             error("Error receiving data");
         }
-        std::cout << "recieved from client\n";
-        Message* recieved = getMessage(buffer);
-        std::string sendMsg = "default\n";
-        
-        if (recieved != NULL) { 
-            sendMsg = recieved->to_string();
-            if (recieved->type() == REQUEST_DOWNLOAD) {
-                std::cout << "Client want to download\n";
-            }
 
-            if (recieved->type() == REQUEST_LIST) {
-                std::cout << "Client want to have list\n";
-            }
+        short_message req;
+        bool ok = copy_buffer_to_message(buffer, receive_message_size, req);
+
+        if (!ok) continue;
+        string cont = get_content_short(req);
+        if (!is_valid_message(cont)) continue;
+
+        if (cont == "GET_LIST") {
+            std::cout << "serving list...\n";
+            serve_list(client_socket);
         }
 
-        std::cout << "To send " + sendMsg << '\n';
-        send(client_socket, sendMsg.c_str(), sendMsg.length() + 1, 0);
-        std::cout << "sent\n";
+        if (cont == "DOWNLOAD_FILE") {
+            get_file_to_download(client_socket);
+        }
+
+
+        std::cout << "hehe\n"; 
+
     }
 
     std::cout << "Closing client socket..." << clientId << std::endl;
