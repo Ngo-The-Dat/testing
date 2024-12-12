@@ -93,5 +93,5 @@ i got the file
 
 ## To do
 
-[] complete 4 worker socket
-[] find a way for worker to update progress to master
+- [ ] complete 4 worker socket
+- [ ] find a way for worker to update progress to master
