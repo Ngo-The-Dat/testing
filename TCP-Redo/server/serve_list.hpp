@@ -56,7 +56,7 @@ void serve_file(SOCKET client_socket, const string& filename, const string& show
         if (send(client_socket, reinterpret_cast<char*>(&send_data), sizeof(data_message), 0) == SOCKET_ERROR) {
             throw std::runtime_error("Failed to send message: " + std::to_string(WSAGetLastError()));
         }
-        std::cout << "sent: " << next << " bytes\n";
+        //std::cout << "sent: " << next << " bytes\n";
 
         cur += next;
     }
