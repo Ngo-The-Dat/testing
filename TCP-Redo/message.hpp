@@ -17,7 +17,8 @@ vector <string> valid_message = {
     "DOWNLOAD_FILE",
     "QUIT",
     "OK",
-    "NO"
+    "NO",
+    "WORKER_GET_CHUNK"
 };
 
 

@@ -1,3 +1,4 @@
+#include <signal.h>
 #include <iostream>
 #include <string>
 #include <winsock2.h>
@@ -8,6 +9,18 @@
 #include "../message.hpp"
 // Winsock library
 #pragma comment(lib, "ws2_32.lib")
+
+enum client_state {
+    RUNNING,
+    STOP
+};
+
+client_state currstate = RUNNING;
+
+void exit_on_signal(int signum) {
+    if (signum == 2) currstate = STOP;
+}
+
 
 class Client {
 public:
@@ -43,7 +56,7 @@ public:
             throw std::runtime_error("Failed to connect to server: " + std::to_string(WSAGetLastError()));
         }
 
-        std::cout << "Connected to " << serverIp << ":" << serverPort << "\n";
+        std::cout << "\n[Connected to " << serverIp << ":" << serverPort << "]\n";
     }
 
     void run() {
@@ -53,7 +66,6 @@ public:
 
         
         int bytesReceived = recv(socketHandle, buffer, RECIEVE_BUFFER_SIZE, 0);
-        std::cout << bytesReceived << '\n';
         
         if (bytesReceived == SOCKET_ERROR) {
             throw std::runtime_error("Failed to receive message: " + std::to_string(WSAGetLastError()));
@@ -63,9 +75,6 @@ public:
             throw std::runtime_error("fail protocol");
         }
 
-        for (int i = 0; i < bytesReceived; i ++) cout << (int) buffer[i] << ' ';
-        cout << '\n';
-
         short_message wellcome;
         bool ok = copy_buffer_to_message(buffer, bytesReceived, wellcome);
         if (!ok) {
@@ -73,8 +82,15 @@ public:
             std::cout << "not ok\n";
             throw std::runtime_error("not ok get server wellcome");
         }
-        std::cout << "[Server]: " << wellcome.len << ' ' << get_content_short(wellcome) << '\n';
-        std::cout << "--- end wellcome ---\n";
+
+        std::cout << "\n\n\t\t\t\t---   WELCOME   ---\n";
+        std::cout << "\n[Server]: \t" << get_content_short(wellcome) << '\n';
+        std::cout << "\t\t\t\t-------------------\n\n";
+
+
+        
+        signal(SIGINT, exit_on_signal);
+
         do {
 
             std::cout << "Command: [list] or [download] (ex: list)\n";
@@ -87,7 +103,8 @@ public:
             if (message == "download") {
                 handle_download(socketHandle);
             }
-        } while (message != "QUIT");
+
+        } while (message != "QUIT" && currstate == RUNNING);
     }
 
 private:
@@ -96,6 +113,7 @@ private:
     SOCKET socketHandle;
     WSADATA wsaData;
 };
+
 
 int main(int argc, char* argv[]) {
     if (argc != 3) {

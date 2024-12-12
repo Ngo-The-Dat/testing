@@ -32,7 +32,7 @@ void handle_client(SOCKET client_socket, int clientId)
     char buffer[RECIEVE_BUFFER_SIZE];
     char sendBuffer[SEND_BUFFER_SIZE];
 
-    std::string message = "Welcome to the server! you are " + std::to_string(clientId) + '\n';
+    std::string message = "Welcome to the server! you are client " + std::to_string(clientId) + '\n';
     int receive_message_size;
 
 
@@ -65,6 +65,10 @@ void handle_client(SOCKET client_socket, int clientId)
 
         if (cont == "DOWNLOAD_FILE") {
             get_file_to_download(client_socket);
+        }
+
+        if (cont == "WORKER_GET_CHUNK") { // getting the file chunk from worker socket
+
         }
 
 
