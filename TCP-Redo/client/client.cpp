@@ -1,3 +1,4 @@
+#include <signal.h>
 #include <iostream>
 #include <string>
 #include <winsock2.h>
@@ -8,6 +9,18 @@
 #include "../message.hpp"
 // Winsock library
 #pragma comment(lib, "ws2_32.lib")
+
+enum client_state {
+    RUNNING,
+    STOP
+};
+
+client_state currstate = RUNNING;
+
+void exit_on_signal(int signum) {
+    if (signum == 2) currstate = STOP;
+}
+
 
 class Client {
 public:
@@ -75,6 +88,11 @@ public:
         }
         std::cout << "[Server]: " << wellcome.len << ' ' << get_content_short(wellcome) << '\n';
         std::cout << "--- end wellcome ---\n";
+
+
+        
+        signal(SIGINT, exit_on_signal);
+
         do {
 
             std::cout << "Command: [list] or [download] (ex: list)\n";
@@ -87,7 +105,7 @@ public:
             if (message == "download") {
                 handle_download(socketHandle);
             }
-        } while (message != "QUIT");
+        } while (message != "QUIT" && currstate == RUNNING);
     }
 
 private:
@@ -96,6 +114,7 @@ private:
     SOCKET socketHandle;
     WSADATA wsaData;
 };
+
 
 int main(int argc, char* argv[]) {
     if (argc != 3) {
