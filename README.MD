@@ -89,9 +89,20 @@ send get list
 i got the file
 ```
 
+## Worker
+
+Create 4 workers at client site
+
+**Protocols:**
+
+After create 4 workers -> let master sleep for some time -> after that check the progress -> throught file?    
+
+
+
 ---
 
 ## To do
 
-- [ ] complete 4 worker socket
-- [ ] find a way for worker to update progress to master
+- [x] complete 4 worker socket
+- [x] find a way for worker to update progress to master
+- [ ] report the protocols and idea
