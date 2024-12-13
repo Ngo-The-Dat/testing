@@ -38,6 +38,16 @@ struct start_file_transfer {
     char filename[SHORT_MESSAGE_LEN];
 };
 
+struct start_chunk_transfer {
+    unsigned long long file_size;
+    unsigned long long offset;
+    unsigned long long offset_lenght;
+    int len;
+    char filename[SHORT_MESSAGE_LEN];
+};
+
+
+
 string get_content_short(const short_message& mess) {
     string res = "";
     for (int i = 0; i < mess.len; i ++) res += mess.content[i];
@@ -66,6 +76,33 @@ bool copy_buffer_to_message(char* buffer, int size, T& target) {
     char* data = reinterpret_cast<char*>(&target);
     for (int i = 0; i < size; i ++) data[i] = buffer[i];
     return true;
+}
+
+template <typename T>
+int send(T& data, SOCKET& server, const string& error_message) {
+    int res = send(server, reinterpret_cast<char*>(&data), sizeof(T), 0);
+    if (res == SOCKET_ERROR) throw runtime_error(error_message);
+    return res;
+}
+
+template <typename T>
+int recv(T& data, SOCKET& server, const string& error_message) {
+    
+    char buffer[RECIEVE_BUFFER_SIZE];
+    int res = recv(server, buffer, sizeof(T), 0);
+
+
+    if (res < 0) {
+        throw runtime_error("Cannot receive data: " + error_message);
+    }
+
+    if (res != sizeof(T)) {
+
+        std::cout << "Wrong protocols: " << error_message << " - Expected size " << sizeof(T) << " but get " << res << '\n';
+        return -1;    
+    }
+    copy_buffer_to_message(buffer, res, data);
+    return res;    
 }
 
 bool is_valid_message(const string& message) {

@@ -68,7 +68,7 @@ void handle_client(SOCKET client_socket, int clientId)
         }
 
         if (cont == "WORKER_GET_CHUNK") { // getting the file chunk from worker socket
-
+            serve_chunk(client_socket);
         }
 
 

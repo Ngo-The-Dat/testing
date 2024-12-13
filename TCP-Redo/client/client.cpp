@@ -21,7 +21,6 @@ void exit_on_signal(int signum) {
     if (signum == 2) currstate = STOP;
 }
 
-
 class Client {
 public:
 
@@ -101,7 +100,8 @@ public:
             }
 
             if (message == "download") {
-                handle_download(socketHandle);
+                handle_download(socketHandle, serverIp, serverPort);
+                //get_download("test.txt", serverIp, serverPort, 0, 0);
             }
 
         } while (message != "QUIT" && currstate == RUNNING);
@@ -113,6 +113,7 @@ private:
     SOCKET socketHandle;
     WSADATA wsaData;
 };
+
 
 
 int main(int argc, char* argv[]) {
