@@ -105,4 +105,6 @@ After create 4 workers -> let master sleep for some time -> after that check the
 
 - [x] complete 4 worker socket
 - [x] find a way for worker to update progress to master
+- [x] complete UI
 - [ ] report the protocols and idea
+- [ ] clean the server log

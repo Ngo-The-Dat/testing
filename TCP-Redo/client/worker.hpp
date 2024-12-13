@@ -17,7 +17,7 @@ public:
 
     Worker(const std::string& serverIp, unsigned short serverPort)
         : serverIp(serverIp), serverPort(serverPort), socketHandle(INVALID_SOCKET) {
-            std::cout << "New worker to connect: " << serverIp << ' ' << serverPort << '\n'; 
+           // std::cout << "New worker to connect: " << serverIp << ' ' << serverPort << '\n'; 
 
         }
 
@@ -47,12 +47,12 @@ public:
         if (connect(socketHandle, reinterpret_cast<sockaddr*>(&server), sizeof(server)) < 0) {
             throw std::runtime_error("Failed to connect to server: " + std::to_string(WSAGetLastError()));
         }
-        std::cout << "\n[Connected to " << serverIp << ":" << serverPort << "]\n";
+        //std::cout << "\n[Connected to " << serverIp << ":" << serverPort << "]\n";
     }
 
 
     void run();
-    void get_file(string filename, unsigned long long offset, unsigned long long len, unsigned long long filesize, int part, unsigned long long& progress);
+    void get_file(string filename, unsigned long long offset, unsigned long long len, unsigned long long filesize, int part, unsigned long long& progress, ofstream& fout);
 
 
 private:

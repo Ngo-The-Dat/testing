@@ -1,5 +1,6 @@
 #include <signal.h>
 #include <iostream>
+#include <atomic>
 #include <string>
 #include <set>
 #include <winsock2.h>
@@ -7,7 +8,9 @@
 #include <memory>
 #include <map>
 #include "receive_file.hpp"
+#include "file_manipulate.hpp"
 #include "../message.hpp"
+#include "TUI.hpp"
 // Winsock library
 #pragma comment(lib, "ws2_32.lib")
 
@@ -16,10 +19,20 @@ enum client_state {
     STOP
 };
 
-client_state currstate = RUNNING;
+static client_state currstate = RUNNING;
 
 void exit_on_signal(int signum) {
     if (signum == 2) currstate = STOP;
+}
+
+
+clientUI ui;
+
+void call_render_ui(clientUI& ui) {
+    while (currstate == RUNNING) {
+        if (!ui.in_progress) ui.display();
+        Sleep(100);
+    }
 }
 
 class Client {
@@ -81,37 +94,34 @@ public:
         short_message wellcome;
         bool ok = copy_buffer_to_message(buffer, bytesReceived, wellcome);
         if (!ok) {
-            
-            std::cout << "not ok\n";
             throw std::runtime_error("not ok get server wellcome");
         }
 
-        std::cout << "\n\n\t\t\t\t---   WELCOME   ---\n";
-        std::cout << "\n[Server]: \t" << get_content_short(wellcome) << '\n';
-        std::cout << "\t\t\t\t-------------------\n\n";
+        // make thread for signal handling
 
-
+//        signal(SIGINT, exit_on_signal);
         
+        ui.set_server_info(serverIp, serverPort);    
+        ofstream lout("system.log");
+        thread render_ui(call_render_ui, ref(ui));        
         signal(SIGINT, exit_on_signal);
 
-        
-
         do {
+            if (!compare_file_set(downloaded_files, "input.txt")) {
+                get_file_list(socketHandle, lout);
+                handle_download(socketHandle, serverIp, serverPort, downloaded_files, lout, ui);
+                lout << "Press ctrl + c to exit\n";
+            } else {
+                // this thread sleep for a while
+                // Sleep(250);
 
-            std::cout << "Command: [list] or [download] (ex: list)\n";
-            std::cout << "[Choice]: ";
-            getline(cin, message);
-            if (message == "list") {
-                get_file_list(socketHandle);
-            }
+                std::this_thread::sleep_for(std::chrono::milliseconds(250));
 
-            if (message == "download") {
-                handle_download(socketHandle, serverIp, serverPort, downloaded_files);
-                //get_download("test.txt", serverIp, serverPort, 0, 0);
             }
-            
-            //Sleep(5000);
-        } while (message != "QUIT" && currstate == RUNNING);
+        } while (currstate == RUNNING);
+
+        lout.close();
+        render_ui.join();
     }
 
 private:

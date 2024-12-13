@@ -12,16 +12,17 @@
 #include <fstream>
 #include <map>
 
+#include "TUI.hpp"
 #include "../message.hpp"
 
-bool get_download(string filename, string ipAddress, unsigned short port, unsigned long long offset, unsigned long long size);
+bool get_download(string filename, string ipAddress, unsigned short port, unsigned long long offset, unsigned long long size, ofstream& lout, clientUI& ui);
 
-void recieve_file(SOCKET server, const string& filename, const string& rename) {
+void recieve_file(SOCKET server, const string& filename, const string& rename, ofstream& lout) {
     
     char buffer[RECIEVE_BUFFER_SIZE];
     char sendBuffer[SEND_BUFFER_SIZE];
     start_file_transfer need_file;
-    std::cout << "recieving...\n";
+    lout << "recieving...\n";
 
     int rByte = recv(server, buffer, RECIEVE_BUFFER_SIZE - 10, 0);
     if (rByte < 0) {
@@ -29,16 +30,16 @@ void recieve_file(SOCKET server, const string& filename, const string& rename) {
     }
     
 
-    std::cout << "entered\n" << rByte << ' ' << sizeof(start_file_transfer) << '\n';
+    lout << "entered\n" << rByte << ' ' << sizeof(start_file_transfer) << '\n';
 
     if (!copy_buffer_to_message(buffer, rByte, need_file)) {
         throw std::runtime_error("Wrong file transfer protocol");
     }
-    cout << "getting the file: ";
-    cout << get_content(need_file.filename, need_file.len) << '\n';
+    lout << "getting the file: ";
+    lout << get_content(need_file.filename, need_file.len) << '\n';
 
     if (get_content(need_file.filename, need_file.len) != filename) {
-        std::cout << "Not the required file\n";
+        lout << "Not the required file\n";
         return;
     }
 
@@ -48,7 +49,7 @@ void recieve_file(SOCKET server, const string& filename, const string& rename) {
         throw runtime_error("Cannot get List asdfja;sdfjalksdf heheehehe\n");
     }    
 
-    std::cout << "send get list\n";
+    lout << "send get list\n";
 
     ofstream fout;
     fout.open(rename.c_str(), ios::binary);
@@ -66,18 +67,18 @@ void recieve_file(SOCKET server, const string& filename, const string& rename) {
 
     fout.close();
 
-    std::cout << "i got the file" << '\n';
+    lout << "i got the file" << '\n';
 }
 
-void get_file_list(SOCKET server) {
+void get_file_list(SOCKET server, ofstream& lout) {
     short_message getlist = make_short_message("GET_LIST");
     if (send(server, reinterpret_cast<char*>(&getlist), sizeof(short_message), 0) == SOCKET_ERROR) {
         throw runtime_error("Cannot get List\n");
     }
-    recieve_file(server, "input.txt", "ready.txt");
+    recieve_file(server, "input.txt", "ready.txt", lout);
 }
 
-void get_any_file(SOCKET server, const string& filename, long long filesize) {
+void get_any_file(SOCKET server, const string& filename, long long filesize, ofstream& lout) {
     short_message getlist = make_short_message("DOWNLOAD_FILE");
     if (send(server, reinterpret_cast<char*>(&getlist), sizeof(short_message), 0) == SOCKET_ERROR) {
         throw runtime_error("Cannot download\n");
@@ -99,41 +100,21 @@ void get_any_file(SOCKET server, const string& filename, long long filesize) {
     }
 
     if (get_content(res.content, res.len) != "OK") {
-        cout << "server rejected\n";
+        lout << "server rejected\n";
         return ;
     }
 
-    recieve_file(server, filename, filename);
+    recieve_file(server, filename, filename, lout);
 }
 
-
-void handle_download(SOCKET server, string serverIp, unsigned short serverPort, set <string>& downloaded_files) {
-    ifstream fin("ready.txt");
-    if (!fin.is_open()) {
-        std::cout << "No current data from server\n";
-        return;
-    }
-
-    map <string, long long> filelist;
-
-    string name;
-    long long size;
-    while (fin >> name >> size) {
-        filelist[name] = size;
-        cout << "Filename & size: " << name << "\t\t" << size << '\n';
-    }
-    fin.close();
-
-    std::cout << "[Choice]: ";
-    getline(cin, name);
-
+void handle_each_file(SOCKET server, string serverIp, unsigned short serverPort, set <string>& downloaded_files, map<string, long long>& filelist, string name, ofstream& lout, clientUI& ui) {
     if (!filelist.count(name)) {
-        std::cout << "No such file\n";
+        lout << "No such file\n";
         return;
     }
 
     if (downloaded_files.count(name)) {
-        std::cout << "File already downloaded\n";
+        lout << "File already downloaded\n";
         return;
     }
 
@@ -144,7 +125,7 @@ void handle_download(SOCKET server, string serverIp, unsigned short serverPort, 
     int rbyt = recv(ack, server, "get server ack");
 
     if (get_content_short(ack) != "OK") {
-        std::cout << "Server rejected at request\n";
+        lout << "Server rejected at request\n";
         return;
     }
 
@@ -158,7 +139,7 @@ void handle_download(SOCKET server, string serverIp, unsigned short serverPort, 
     rbyt = recv(ack, server, "get server ack");
 
     if (get_content_short(ack) != "OK") {
-        std::cout << "Server rejected at get file\n";
+        lout << "Server rejected at get file\n";
         return;
     }
 
@@ -166,14 +147,46 @@ void handle_download(SOCKET server, string serverIp, unsigned short serverPort, 
     // void get_download(string filename, string ipAddress, unsigned short port, unsigned long long offset, unsigned long long size)
 
     //get_any_file(server, name, filelist[name]);
-    bool status = get_download(name, serverIp, serverPort, 0, filelist[name]);
+    bool status = get_download(name, serverIp, serverPort, 0, filelist[name], lout, ui);
     
     if (!status) {
-        std::cout << "Failed to download\n";
+        lout << "Failed to download\n";
+        return;
+    }
+    downloaded_files.insert(name);
+}
+
+void handle_download(SOCKET server, string serverIp, unsigned short serverPort, set <string>& downloaded_files, ofstream& lout, clientUI& ui) {
+    ifstream fin("ready.txt");
+    if (!fin.is_open()) {
+        lout << "No current data from server\n";
         return;
     }
 
-    downloaded_files.insert(name);
+    map <string, long long> filelist;
+
+    string name;
+    long long size;
+    while (fin >> name >> size) {
+        filelist[name] = size;
+        lout << "Filename & size: " << name << "\t\t" << size << '\n';
+    }
+    fin.close();
+
+    vector <pair<string, unsigned long long>> filelist_ui;
+    for (auto& it : filelist) {
+        filelist_ui.push_back({it.first, it.second});
+    }
+    ui.set_file_list(filelist_ui);
+
+    fin.open("input.txt");
+    if (!fin.is_open()) {
+        return;
+    }
+
+    while (fin >> name) {
+        handle_each_file(server, serverIp, serverPort, downloaded_files, filelist, name, lout, ui);
+    }
 }
 
 
@@ -198,14 +211,12 @@ void Worker::run() {
 
     short_message wellcome;
     bool ok = copy_buffer_to_message(buffer, bytesReceived, wellcome);
-    if (!ok) {
-        
-        std::cout << "not ok\n";
+    if (!ok) {        
         throw std::runtime_error("not ok get server wellcome");
     }
 }
 
-void Worker::get_file(string filename, unsigned long long offset, unsigned long long len, unsigned long long filesize, int part, unsigned long long& progress) {
+void Worker::get_file(string filename, unsigned long long offset, unsigned long long len, unsigned long long filesize, int part, unsigned long long& progress, ofstream& lout) {
 
     short_message worker_hello = make_short_message("WORKER_GET_CHUNK");
     send(worker_hello, socketHandle, "worker_send");
@@ -213,8 +224,8 @@ void Worker::get_file(string filename, unsigned long long offset, unsigned long 
     int rbyt = recv(worker_hello, socketHandle, "worker recv from server");
 
     if (get_content(worker_hello.content, worker_hello.len) != "OK") {
-        std::cout << "Content: " << get_content(worker_hello.content, worker_hello.len) << '\n';
-        std::cout << "Server rejected at hello\n";
+        lout << "Content: " << get_content(worker_hello.content, worker_hello.len) << '\n';
+        lout << "Server rejected at hello\n";
         return;
     }
 
@@ -232,7 +243,7 @@ void Worker::get_file(string filename, unsigned long long offset, unsigned long 
     rbyt = recv(ack, socketHandle, "get server ack");
 
     if (get_content_short(ack) != "OK") {
-        std::cout << "Server rejected at get chunk\n";
+        lout << "Server rejected at get chunk\n";
         return;
     }
 
@@ -244,7 +255,7 @@ void Worker::get_file(string filename, unsigned long long offset, unsigned long 
 
     if (!fout.is_open()) {
         ack = make_short_message("NO");
-        std::cout << "error open file " << file_part_name << '\n';
+        fout << "error open file " << file_part_name << '\n';
         send(ack, socketHandle, "not ok");
         return;
     }
@@ -260,7 +271,7 @@ void Worker::get_file(string filename, unsigned long long offset, unsigned long 
         rbyt = recv(rec, socketHandle, to_string(part) + " file transfer");
         if (rbyt < 0) {
             fout.close();
-            std::cout << "error recv on" + file_part_name << '\n';
+            fout << "error recv on" + file_part_name << '\n';
             return;
         }
         fout.write(rec.content, rec.len);
@@ -269,12 +280,15 @@ void Worker::get_file(string filename, unsigned long long offset, unsigned long 
     }
     
     fout.close();
-    std::cout << file_part_name << " Successully recieved\n";
+    lout << file_part_name << " Successully recieved\n";
     
 }
 
 
-bool get_download(string filename, string ipAddress, unsigned short port, unsigned long long offset, unsigned long long size) {
+bool get_download(string filename, string ipAddress, unsigned short port, unsigned long long offset, unsigned long long size, ofstream& lout, clientUI& ui) {
+
+    ui.set_file_name(filename);
+
     vector <Worker*> workers;
     const int num_worker = 4;
 
@@ -303,26 +317,34 @@ bool get_download(string filename, string ipAddress, unsigned short port, unsign
 
         target_size[i] = chunk;
 
-        threads.push_back(thread(&Worker::get_file, workers[i], filename, offset_assigned, chunk, size, i + 1, ref(progress[i])));
+        threads.push_back(thread(&Worker::get_file, workers[i], filename, offset_assigned, chunk, size, i + 1, ref(progress[i]), ref(lout)));
  
         offset_assigned += chunk;
 
     }
 
     while (true) {
+        ui.in_progress = true;
         bool done = true;
+        unsigned long long total_progress = 0;
         for (int i = 0; i < num_worker; i ++) {
             if (progress[i] < target_size[i]) {
                 done = false;
             }
 
-            int percent = ((double)progress[i] / (double)target_size[i]) * 100;
-            std::cout << "Progress " << i + 1 << ": " << percent << 
-            "%\t\t size: " << progress[i] << '/' << target_size[i] << '\n';
+            total_progress += progress[i];
 
+            int percent = ((double)progress[i] / (double)target_size[i]) * 100;
+            lout << "Progress " << i + 1 << ": " << percent << 
+            "%\t\t size: " << progress[i] << '/' << target_size[i] << '\n';
+            ui.set_chunk_progress(i + 1, percent);
         }
+
+        ui.set_total_progress((double)total_progress / (double)size * 100);
+
+        ui.in_progress = false;
         if (done) break;
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1500));
     }
 
     for (int i = 0; i < num_worker; i ++) threads[i].join();
@@ -336,7 +358,7 @@ bool get_download(string filename, string ipAddress, unsigned short port, unsign
         string file_part_name = "[" + to_string(i) + "]#" + filename;
         ifstream fin(file_part_name.c_str(), ios::binary);
         if (!fin.is_open()) {
-            std::cout << "Cannot open file " << file_part_name << '\n';
+            lout << "Cannot open file " << file_part_name << '\n';
             return false;
         }
 
@@ -347,6 +369,9 @@ bool get_download(string filename, string ipAddress, unsigned short port, unsign
     }
 
     result.close();
+
+    lout << "File " << filename << " downloaded\n";
+
     return true;
 
 }
