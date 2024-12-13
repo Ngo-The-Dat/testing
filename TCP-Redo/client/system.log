@@ -1,0 +1,19 @@
+recieving...
+entered
+216 216
+getting the file: input.txt
+send get list
+i got the file
+Filename & size: cat.jpg		77456
+Filename & size: file1.txt		9
+Filename & size: image.png		51192
+Filename & size: image2.png		64270
+Filename & size: Matcha.pdf		47314780
+Progress 1: 0%		 size: 0/19364
+Progress 2: 0%		 size: 0/19364
+Progress 3: 0%		 size: 0/19364
+Progress 4: 0%		 size: 0/19364
+[1]#cat.jpg Successully recieved
+[2]#cat.jpg Successully recieved
+[4]#cat.jpg Successully recieved
+[3]#cat.jpg Successully recieved
