@@ -1,6 +1,7 @@
 #include <signal.h>
 #include <iostream>
 #include <string>
+#include <set>
 #include <winsock2.h>
 #include <stdexcept>
 #include <memory>
@@ -22,6 +23,9 @@ void exit_on_signal(int signum) {
 }
 
 class Client {
+
+    set <string> downloaded_files;
+
 public:
 
     Client(const std::string& serverIp, unsigned short serverPort)
@@ -90,6 +94,8 @@ public:
         
         signal(SIGINT, exit_on_signal);
 
+        
+
         do {
 
             std::cout << "Command: [list] or [download] (ex: list)\n";
@@ -100,10 +106,11 @@ public:
             }
 
             if (message == "download") {
-                handle_download(socketHandle, serverIp, serverPort);
+                handle_download(socketHandle, serverIp, serverPort, downloaded_files);
                 //get_download("test.txt", serverIp, serverPort, 0, 0);
             }
-
+            
+            //Sleep(5000);
         } while (message != "QUIT" && currstate == RUNNING);
     }
 
@@ -117,6 +124,8 @@ private:
 
 
 int main(int argc, char* argv[]) {
+
+    system("cls");
     if (argc != 3) {
         std::cerr << "Usage: " << argv[0] << " <server_ip> <server_port>\n";
         return 1;

@@ -64,17 +64,6 @@ void serve_file(SOCKET client_socket, const string& filename, const string& show
     fi.close();
 
     std::cout << "sent the file " + filename << '\n';
-/*
-    short_message last_ok;
-    rByte = recv(client_socket, reinterpret_cast<char*>(&last_ok), sizeof(short_message), 0);
-    if (rByte < 0) {
-        throw std::runtime_error("Fail on last acc");
-    }
-
-    if (get_content(last_ok.content, last_ok.len) != "OK") {
-        std::cout << "OPPS\n";
-    } 
-*/
 }
 
 map <string, unsigned long long> get_available_file() {
@@ -96,6 +85,30 @@ map <string, unsigned long long> get_available_file() {
 void serve_list(SOCKET client_socket) {
     const string filename = "input.txt";
     serve_file(client_socket, filename, filename);
+}
+
+void check_file_to_download(SOCKET client_socket) {
+    short_message server_hello = make_short_message("OK");
+    send(server_hello, client_socket, "server_send");
+    std::cout << "server hello sent\n";
+
+    start_file_transfer target;
+    int rbyte = recv(target, client_socket, "cannot get the requirment");
+
+    string filename = get_content(target.filename, target.len);
+    unsigned long long filesize = target.file_size;
+
+    auto filelist = get_available_file();
+    
+    short_message ack;
+    if (!filelist.count(filename) || filelist[filename] != filesize) {
+        ack = make_short_message("NO");
+        send(ack, client_socket, "Cannot send reject\n");
+        return;
+    }
+
+    ack = make_short_message("OK");
+    send(ack, client_socket, "Cannot accept\n");
 }
 
 void get_file_to_download(SOCKET client_socket) {
@@ -219,7 +232,6 @@ void serve_chunk(SOCKET client_socket) {
         send_data.len = next;
         fin.read(send_data.content, next);
         send(send_data, client_socket, "fail to send");
-      //  std::cout << "sent from offset: " << offset << " bytes " << next << " bytes\n";
         cur += next;
     }
 

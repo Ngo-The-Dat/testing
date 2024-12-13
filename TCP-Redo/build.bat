@@ -20,6 +20,7 @@ if "%1"=="client" (
     echo Compiling client...
     cd client
     %CC% client.cpp -lws2_32  %CSC% -o client.exe
+    python reset_input.py
     if errorlevel 1 exit /b 1
     echo Client compiled successfully.
     cd ..

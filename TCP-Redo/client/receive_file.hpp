@@ -14,7 +14,8 @@
 
 #include "../message.hpp"
 
-void get_download(string filename, string ipAddress, unsigned short port, unsigned long long offset, unsigned long long size);
+bool get_download(string filename, string ipAddress, unsigned short port, unsigned long long offset, unsigned long long size);
+
 void recieve_file(SOCKET server, const string& filename, const string& rename) {
     
     char buffer[RECIEVE_BUFFER_SIZE];
@@ -106,7 +107,7 @@ void get_any_file(SOCKET server, const string& filename, long long filesize) {
 }
 
 
-void handle_download(SOCKET server, string serverIp, unsigned short serverPort) {
+void handle_download(SOCKET server, string serverIp, unsigned short serverPort, set <string>& downloaded_files) {
     ifstream fin("ready.txt");
     if (!fin.is_open()) {
         std::cout << "No current data from server\n";
@@ -126,10 +127,53 @@ void handle_download(SOCKET server, string serverIp, unsigned short serverPort) 
     std::cout << "[Choice]: ";
     getline(cin, name);
 
+    if (!filelist.count(name)) {
+        std::cout << "No such file\n";
+        return;
+    }
+
+    if (downloaded_files.count(name)) {
+        std::cout << "File already downloaded\n";
+        return;
+    }
+
+    short_message worker_hello = make_short_message("DOWNLOAD_FILE");
+    send(worker_hello, server, "worker_send");
+
+    short_message ack;
+    int rbyt = recv(ack, server, "get server ack");
+
+    if (get_content_short(ack) != "OK") {
+        std::cout << "Server rejected at request\n";
+        return;
+    }
+
+    start_file_transfer start_sending;
+    strcpy(start_sending.filename, name.c_str());
+    start_sending.len = name.size();
+    start_sending.file_size = filelist[name];
+
+    send(start_sending, server, "worker asked for file");
+
+    rbyt = recv(ack, server, "get server ack");
+
+    if (get_content_short(ack) != "OK") {
+        std::cout << "Server rejected at get file\n";
+        return;
+    }
+
+
     // void get_download(string filename, string ipAddress, unsigned short port, unsigned long long offset, unsigned long long size)
 
     //get_any_file(server, name, filelist[name]);
-    get_download(name, serverIp, serverPort, 0, filelist[name]);
+    bool status = get_download(name, serverIp, serverPort, 0, filelist[name]);
+    
+    if (!status) {
+        std::cout << "Failed to download\n";
+        return;
+    }
+
+    downloaded_files.insert(name);
 }
 
 
@@ -159,10 +203,6 @@ void Worker::run() {
         std::cout << "not ok\n";
         throw std::runtime_error("not ok get server wellcome");
     }
-
-    std::cout << "\n\n\t\t\t\t---   WORKER   ---\n";
-    std::cout << "\n[Server]: \t" << get_content_short(wellcome) << '\n';
-    std::cout << "\t\t\t\t-------------------\n\n";
 }
 
 void Worker::get_file(string filename, unsigned long long offset, unsigned long long len, unsigned long long filesize, int part, unsigned long long& progress) {
@@ -214,8 +254,6 @@ void Worker::get_file(string filename, unsigned long long offset, unsigned long 
     unsigned long long total_size = 0;
     unsigned long long need_size = len;
 
-
-
     data_message rec;
 
     while (total_size < need_size) {
@@ -232,16 +270,11 @@ void Worker::get_file(string filename, unsigned long long offset, unsigned long 
     
     fout.close();
     std::cout << file_part_name << " Successully recieved\n";
-
+    
 }
 
 
-void get_download(string filename, string ipAddress, unsigned short port, unsigned long long offset, unsigned long long size) {
-    // Worker worker1(ipAddress, port);
-    // worker1.initialize();
-    // worker1.connectToServer();
-    // worker1.run();
-
+bool get_download(string filename, string ipAddress, unsigned short port, unsigned long long offset, unsigned long long size) {
     vector <Worker*> workers;
     const int num_worker = 4;
 
@@ -296,34 +329,24 @@ void get_download(string filename, string ipAddress, unsigned short port, unsign
     for (int i = 0; i < num_worker; i ++) delete workers[i];
 
     ofstream result;
-    result.open(filename.c_str(), ios::binary);
+    string destination = "Files/" + filename;
+    result.open(destination.c_str(), ios::binary);
 
     for (int i = 1; i <= num_worker; i ++) {
         string file_part_name = "[" + to_string(i) + "]#" + filename;
         ifstream fin(file_part_name.c_str(), ios::binary);
         if (!fin.is_open()) {
             std::cout << "Cannot open file " << file_part_name << '\n';
-            return;
+            return false;
         }
 
-
-        char buffer[RECIEVE_BUFFER_SIZE];
-        unsigned long long target = target_size[i - 1];
-        unsigned long long cur = 0;
-        while (cur < target) {
-            int next = RECIEVE_BUFFER_SIZE;
-            if (cur + next > target) next = target - cur;
-            fin.read(buffer, next);
-            result.write(buffer, next);
-            cur += next;
-        }
+        result << fin.rdbuf();
 
         fin.close();
- 
         remove(file_part_name.c_str());
-
     }
 
     result.close();
+    return true;
 
 }

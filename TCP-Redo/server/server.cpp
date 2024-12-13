@@ -64,7 +64,7 @@ void handle_client(SOCKET client_socket, int clientId)
         }
 
         if (cont == "DOWNLOAD_FILE") {
-            get_file_to_download(client_socket);
+            check_file_to_download(client_socket);
         }
 
         if (cont == "WORKER_GET_CHUNK") { // getting the file chunk from worker socket
