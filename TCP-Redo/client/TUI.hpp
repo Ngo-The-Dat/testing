@@ -14,8 +14,8 @@
 using namespace std;
 
 // adapted from https://stackoverflow.com/questions/14295570/why-is-console-animation-so-slow-on-windows-and-is-there-a-way-to-improve-spee
-#define     ROWS        80
-#define     COLS        80
+#define     ROWS        50
+#define     COLS        60
 
 static CHAR_INFO disp[ROWS][COLS];
 static HANDLE console;
@@ -55,13 +55,16 @@ void fill_edges(int civ1[ROWS+2][COLS+2]) {
 }
 
 
-void update_generation(vector <string>& buffer, int civ1[ROWS+2][COLS+2])
+void update_generation(vector <string>& buffer, vector<vector<int>> &bufferAtribute, int civ1[ROWS+2][COLS+2])
 {
     int i, j, count;
+    int tmp = 0;
     for (int i = 0; i < buffer.size(); i ++) {
         for (int j = 0; j < buffer[i].size(); j ++) {
             disp[i + 1][j + 1].Char.AsciiChar = buffer[i][j];
-            disp[i + 1][j + 1].Attributes = 0x0F;
+            if (bufferAtribute[i][j] != 0) {
+                disp[i + 1][j + 1].Attributes = bufferAtribute[i][j];
+            } else disp[i + 1][j + 1].Attributes = FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY;
         }
     }
 
@@ -74,7 +77,7 @@ void initialize(void)
 {
     int i, j;
 
-    ClrScrn(123);
+    ClrScrn(40);
     srand(((unsigned int)time(NULL))|1);
 
     for (i = 1; i <= ROWS; ++i)
@@ -82,7 +85,7 @@ void initialize(void)
         for (j = 1; j <= COLS; ++j)
         {
             civ1[i][j] = (int)(((__int64)rand()*2)/RAND_MAX);
-            disp[i-1][j-1].Char.AsciiChar = civ1[i][j] ? '*' : ' ';
+            disp[i-1][j-1].Char.AsciiChar = civ1[i][j] ? ' ' : ' ';
             disp[i-1][j-1].Attributes = 0;
         }
     }
@@ -93,7 +96,7 @@ void initialize(void)
 class Window {
     int width, height;
     vector<string> buffer;
-
+    vector<vector<int>> bufferAtribute;
 
 public:
 
@@ -110,10 +113,13 @@ public:
 
     Window(int width, int height) : width(width), height(height) {
         buffer.resize(height);        
+        bufferAtribute.resize(height);
         for (int i = 0; i < height; i++) {
             buffer[i] = "";
+            bufferAtribute[i].clear();
             for (int j = 0; j < width; j++) {
                 buffer[i] += " ";
+                bufferAtribute[i].push_back(0);
             }
         }
     }
@@ -163,8 +169,14 @@ public:
         }
     }
 
+    void set_buffer_atribute(int row, const vector<int>& atribute) {
+        for (int i = 0; i < min(bufferAtribute[row].size(), atribute.size()); i++) {
+            bufferAtribute[row][i] = atribute[i];
+        }
+    }
+
     void render() {
-        update_generation(buffer, civ1);
+        update_generation(buffer, bufferAtribute, civ1);
     }
 
 };
@@ -208,17 +220,18 @@ public:
         });
 
         buffer.push_back({
-            "            Downloading File           ", 
+            "             Download Progress Tracker               ", 
             1
         });
+        
 
         buffer.push_back({
-            "---------------------------------------",
+            "-----------------------------------------------------",
             2
         });
 
         buffer.push_back({
-            "File: [filename.ext]", 
+            "Downloading File: [filename.ext]", 
             3
         });
 
@@ -259,18 +272,23 @@ public:
         });
 
         buffer.push_back({
-            "Total Progress: [###########         ] 65%", 
+            "Total Progress:   [###########         ] 65%", 
             11
         });
 
         buffer.push_back({
-            "", 
+            "Combine Progress: [###########         ] 65%", 
             12
         });
 
         buffer.push_back({
-            "[Press 'ctrl' + 'c' to cancel download]", 
+            "", 
             13
+        });
+
+        buffer.push_back({
+            "[Press 'ctrl' + 'c' to cancel download]", 
+            14
         });        
     }
 
@@ -279,6 +297,12 @@ public:
     }
     
     void display() {
+        
+        vector <int> atribute;
+        for (int i = 0; i < 60; i ++) atribute.push_back(134);
+        atribute[0] = atribute[1] = 0;
+
+        window.set_buffer_atribute(base_row + 1, atribute);
         for (auto& line: buffer) {
             string r = line.first;
             while (r.size() < 50) {
@@ -289,34 +313,83 @@ public:
     }
 
     void set_file_name(string filename) {
-        buffer[3].first = "File: [" + filename + "]";
+        buffer[3].first = "Downloading File: [" + filename + "]";
+
+        vector <int> atribute(60);
+        for (int i = 21; i < 21 + filename.size(); i ++) {
+            atribute[i] = FOREGROUND_INTENSITY | FOREGROUND_GREEN;
+        }
+
         while (buffer[3].first.size() < 40) {
             buffer[3].first += " ";
         }
+
+        window.set_buffer_atribute(3 + base_row, atribute);
     }
 
     void set_chunk_progress(int chunk, int progress) {
         buffer[chunk + 5].first = "Chunk " + to_string(chunk) + ": [";
+        vector <int> atribute(60);
         for (int i = 0; i < 20; i++) {
             if (i * 100 / 20 < progress) {
-                buffer[chunk + 5].first += "#";
+                buffer[chunk + 5].first += "=";
+                atribute[i + 12] = FOREGROUND_INTENSITY | FOREGROUND_GREEN;
             } else {
                 buffer[chunk + 5].first += " ";
             }
         }
         buffer[chunk + 5].first += "] " + to_string(progress) + "%";
+        for (int i = 34; i < 60; i ++) atribute[i] = (progress < 100 ? FOREGROUND_RED : FOREGROUND_GREEN) |  FOREGROUND_INTENSITY;
+
+        window.set_buffer_atribute(chunk + 5 + base_row, atribute);
+
     }
 
     void set_total_progress(int progress) {
-        buffer[11].first = "Total Progress: [";
+        buffer[11].first = "Total Progress:   [";
+        vector <int> atribute(60);
         for (int i = 0; i < 20; i++) {
             if (i  * 100 / 20 < progress) {
-                buffer[11].first += "#";
+                buffer[11].first += "=";
+                //buffer[chunk + 5].first += "=";
+                atribute[i + 21] = FOREGROUND_INTENSITY | FOREGROUND_GREEN;
+            
             } else {
                 buffer[11].first += " ";
             }
         }
+
         buffer[11].first += "] " + to_string(progress) + "%";
+        
+        for (int i = 42; i < 60; i ++) atribute[i] = (progress < 100 ? FOREGROUND_RED : FOREGROUND_GREEN) |  FOREGROUND_INTENSITY;
+
+        window.set_buffer_atribute(11 + base_row, atribute);
+    }
+
+    void set_combine_progress(int progress) {
+
+        vector <int> atribute(60);
+        buffer[12].first = "Combine Progress: [";
+        for (int i = 0; i < 20; i++) {
+            if (i  * 100 / 20 < progress) {
+                buffer[12].first += "=";
+                atribute[i + 21] = FOREGROUND_INTENSITY | FOREGROUND_GREEN;
+            } else {
+                buffer[12].first += " ";
+            }
+        }
+        buffer[12].first += "] " + to_string(progress) + "%";
+        for (int i = 42; i < 60; i ++) atribute[i] = (progress < 100 ? FOREGROUND_RED : FOREGROUND_GREEN) |  FOREGROUND_INTENSITY;
+        window.set_buffer_atribute(12 + base_row, atribute);
+
+        for (int i = 2; i < 60; i ++) atribute[i] = FOREGROUND_RED | FOREGROUND_INTENSITY | FOREGROUND_BLUE;
+
+        window.set_buffer_atribute(14 + base_row, atribute);
+
+    }
+
+    void set_message(const string& message) {
+        buffer[14].first = message;
     }
 };
 
@@ -378,17 +451,42 @@ public:
         this->files = files;
     }
 
+    void set_server_info(string ip, int port) {
+        IP = ip;
+        this->port = port;
+    }
+
     void display() {
         int base = 6;
 
-        window.draw_line("             Available Files on Server     ", 1);
-        window.draw_line("---------------------------------------", 2);
+        window.draw_line("              Available Files on Server              ", 1);
+
+        vector <int> atribute;
+        for (int i = 0; i < 60; i ++) atribute.push_back(129);
+        atribute[0] = atribute[1] = 0;
+        window.set_buffer_atribute(1, atribute);
+
+        window.draw_line("-----------------------------------------------------", 2);
 
         string serverInfo = "Server: " + IP + ":" + to_string(port);
+
         window.draw_line(serverInfo, 3);
+        
+        for (int i = 1; i < 40; i ++) {
+            if (i > 8) atribute[i] = FOREGROUND_INTENSITY | FOREGROUND_GREEN;
+            else atribute[i] = 0;
+        }
+        for (int i = 40; i < 60; i ++) atribute[i] = 0;
+        window.set_buffer_atribute(3, atribute);
 
         window.draw_line("File Name                               | Size (byte)", 4);
-        window.draw_line("-----------------------------------------", 5);
+        for (auto &i: atribute) i = 0;
+        for (int i = 1; i < 30; i ++) atribute[i] = FOREGROUND_INTENSITY | FOREGROUND_GREEN;
+        for (int i = 59; i >= 44; i --) atribute[i] = FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY;
+        window.set_buffer_atribute(4, atribute);
+        
+        window.draw_line("-----------------------------------------------------", 5);
+        
         int i = 0;
         for (auto& file: files) {
             string line = file.first;
@@ -398,6 +496,7 @@ public:
 
             line += "| " + to_string(file.second);
             window.draw_line(line, base + i);
+            window.set_buffer_atribute(base + i, atribute);
             i ++;
         }
     }
@@ -444,6 +543,8 @@ public:
     void set_server_info(string ip, int port) {
         IP = ip;
         this->port = port;
+
+        a.set_server_info(ip, port);
     }
 
     void display_available_files() {
@@ -476,6 +577,14 @@ public:
 
     void set_base_row(int row) {
         d.set_base_row(row);
+    }
+
+    void set_message(const string& message) {
+        d.set_message(message);
+    }
+
+    void set_combine_progress(int progress) {
+        d.set_combine_progress(progress);
     }
 
     void display() {

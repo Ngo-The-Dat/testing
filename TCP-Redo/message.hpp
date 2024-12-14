@@ -81,7 +81,10 @@ bool copy_buffer_to_message(char* buffer, int size, T& target) {
 template <typename T>
 int send(T& data, SOCKET& server, const string& error_message) {
     int res = send(server, reinterpret_cast<char*>(&data), sizeof(T), 0);
-    if (res == SOCKET_ERROR) throw runtime_error(error_message);
+    if (res == SOCKET_ERROR) {
+        std::cerr << "Cannot send data: " + error_message << '\n';
+        return -1;
+    }
     return res;
 }
 
@@ -93,7 +96,8 @@ int recv(T& data, SOCKET& server, const string& error_message) {
 
 
     if (res < 0) {
-        throw runtime_error("Cannot receive data: " + error_message);
+        std::cerr << "Cannot receive data: " + error_message;
+        return -1;
     }
 
     if (res != sizeof(T)) {

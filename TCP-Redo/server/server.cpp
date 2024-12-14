@@ -40,7 +40,8 @@ void handle_client(SOCKET client_socket, int clientId)
     short_message wellcome = make_short_message(message);
     char* data = reinterpret_cast<char*>(&wellcome);
     if (send(client_socket, data, sizeof(short_message), 0) == SOCKET_ERROR) {
-        throw std::runtime_error("Failed to send message: " + std::to_string(WSAGetLastError()));
+        std::cout << "Failed to send message: " << WSAGetLastError() << std::endl;
+        return;
     }
     
     while (true)
@@ -48,7 +49,8 @@ void handle_client(SOCKET client_socket, int clientId)
         // only short message allowed here
         receive_message_size = recv(client_socket, buffer, RECIEVE_BUFFER_SIZE, 0);
         if (receive_message_size < 0) {
-            error("Error receiving data");
+            std::cerr << "Error receiving data\n";
+            break;
         }
 
         short_message req;
@@ -71,6 +73,9 @@ void handle_client(SOCKET client_socket, int clientId)
             serve_chunk(client_socket);
         }
 
+        if (cont == "QUIT") {
+            break;
+        }
 
         std::cout << "hehe\n"; 
 

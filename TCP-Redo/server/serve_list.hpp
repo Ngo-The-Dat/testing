@@ -25,20 +25,23 @@ void serve_file(SOCKET client_socket, const string& filename, const string& show
 
     std::cout << "starting to send....\n";
     if (send(client_socket, reinterpret_cast<char*>(&start_sending), sizeof(start_file_transfer), 0) == SOCKET_ERROR) {
-        throw std::runtime_error("Failed to send message: " + std::to_string(WSAGetLastError()));
+        std::cout << "Failed to send message: " + std::to_string(WSAGetLastError()) << '\n';
+        return;
     }
     std::cout << "done send....\n";
 
     int rByte = recv(client_socket, buffer, RECIEVE_BUFFER_SIZE, 0);
     if (rByte < 0) {
-        throw std::runtime_error("Failed to recv message: " + std::to_string(WSAGetLastError()));
+        std::cout << "Failed to recv message: " + std::to_string(WSAGetLastError()) << '\n';
+        return;
     }
 
     short_message acc;
     copy_buffer_to_message(buffer, rByte, acc);
 
     if (!is_valid_message(get_content_short(acc)) || get_content_short(acc) != "OK") {
-        throw std::runtime_error("Failed to accept message: " + std::to_string(WSAGetLastError()));
+        std::cout << "Failed to accept message: " + std::to_string(WSAGetLastError()) << '\n';
+        return;
     }
 
     std::cout << "RECIEVED OK\n";
@@ -54,7 +57,9 @@ void serve_file(SOCKET client_socket, const string& filename, const string& show
         fi.read(send_data.content, next);
 
         if (send(client_socket, reinterpret_cast<char*>(&send_data), sizeof(data_message), 0) == SOCKET_ERROR) {
-            throw std::runtime_error("Failed to send message: " + std::to_string(WSAGetLastError()));
+            
+            std::cout << "Failed to send message: " + std::to_string(WSAGetLastError()) << '\n';
+            return;
         }
         //std::cout << "sent: " << next << " bytes\n";
 
@@ -72,6 +77,7 @@ map <string, unsigned long long> get_available_file() {
     ifstream fin("input.txt");
     if (!fin.is_open()) {
         std::cout << "No current data from server\n";
+        return filelist;
     }
 
     string name;
@@ -119,7 +125,8 @@ void get_file_to_download(SOCKET client_socket) {
     start_file_transfer rec;
     int rByte = recv(client_socket, buffer, RECIEVE_BUFFER_SIZE, 0);
     if (rByte < 0) {
-        throw std::runtime_error("Failed to recv message: " + std::to_string(WSAGetLastError()));
+        std::cout << "Failed to recv message: " + std::to_string(WSAGetLastError()) << '\n';
+        return;
     }
 
     if (!copy_buffer_to_message(buffer, rByte, rec)) {
@@ -153,7 +160,8 @@ void get_file_to_download(SOCKET client_socket) {
     
         short_message reject = make_short_message("NO");
         if (send(client_socket, reinterpret_cast<char*>(&reject), sizeof(short_message), 1) == SOCKET_ERROR) {
-            throw runtime_error("Cannot reject");
+            std::cout << "Cannot reject\n";
+            return;
         }
     
         return;
@@ -161,7 +169,8 @@ void get_file_to_download(SOCKET client_socket) {
 
     short_message acc = make_short_message("OK");
     if (send(client_socket, reinterpret_cast<char*>(&acc), sizeof(short_message), 1) == SOCKET_ERROR) {
-        throw runtime_error("Cannot accept");
+        std::cout << "Cannot accept\n";
+        return;
     }
  
     string path = "Files/" + client_wants;
@@ -231,7 +240,12 @@ void serve_chunk(SOCKET client_socket) {
 
         send_data.len = next;
         fin.read(send_data.content, next);
-        send(send_data, client_socket, "fail to send");
+        
+        if (send(send_data, client_socket, "fail to send") < 0) {
+            std::cout << "Failed to send message: " + std::to_string(WSAGetLastError()) << '\n';
+            return;
+        }
+
         cur += next;
     }
 

@@ -1,3 +1,1 @@
-cat.jpg
 Matcha.pdf
-image2.png
