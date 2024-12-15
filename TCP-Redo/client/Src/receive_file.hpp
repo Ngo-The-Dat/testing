@@ -95,7 +95,7 @@ void get_file_list(SOCKET server, ofstream& lout, clientUI& ui) {
     fin.close();
 }
 
-void handle_each_file(SOCKET server, string serverIp, unsigned short serverPort, vector <string>& downloaded_files, map<string, long long>& filelist, string name, ofstream& lout, clientUI& ui) {
+void handle_each_file(SOCKET server, string serverIp, unsigned short serverPort, map<string, long long>& filelist, string name, ofstream& lout, clientUI& ui) {
     if (!filelist.count(name)) {
         lout << "No such file\n";
         return;
@@ -136,8 +136,6 @@ void handle_each_file(SOCKET server, string serverIp, unsigned short serverPort,
         lout << "Failed to download\n";
         return;
     }
-
-    downloaded_files.push_back(name);
 }
 
 void handle_download(SOCKET server, string serverIp, unsigned short serverPort, vector <string>& downloaded_files, ofstream& lout, clientUI& ui) {
@@ -170,11 +168,12 @@ void handle_download(SOCKET server, string serverIp, unsigned short serverPort, 
 
     int i = 0;
     while (fin >> name) {
-        if (i < downloaded_files.size() && downloaded_files[i] == name) {
+        if (i < downloaded_files.size()) {
             i++; continue;
         }
 
-        handle_each_file(server, serverIp, serverPort, downloaded_files, filelist, name, lout, ui);
+        handle_each_file(server, serverIp, serverPort, filelist, name, lout, ui);
+        downloaded_files.push_back(name);
         i ++;
     }
 }

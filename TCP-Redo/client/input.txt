@@ -1,7 +1,6 @@
-file1.txt
+cat-(2).jpg
 cat.jpg
-Matcha.pdf
-Matcha.pdf
-file1.txt
 cat.jpg
-QuickShare_2412041632.zip
+cat.jpg
+cat.jpg
+cat-(3).jpg
