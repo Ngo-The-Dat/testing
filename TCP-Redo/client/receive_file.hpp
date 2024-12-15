@@ -70,12 +70,28 @@ void recieve_file(SOCKET server, const string& filename, const string& rename, o
     lout << "i got the file" << '\n';
 }
 
-void get_file_list(SOCKET server, ofstream& lout) {
+void get_file_list(SOCKET server, ofstream& lout, clientUI& ui) {
     short_message getlist = make_short_message("GET_LIST");
     if (send(server, reinterpret_cast<char*>(&getlist), sizeof(short_message), 0) == SOCKET_ERROR) {
         throw runtime_error("Cannot get List\n");
     }
+
     recieve_file(server, "input.txt", "ready.txt", lout);
+
+    ifstream fin("ready.txt");
+    if (!fin.is_open()) {
+        lout << "No current data from server\n";
+        return;
+    }
+
+    string name; 
+    unsigned long long size;
+
+    while (fin >> name >> size) {
+        ui.add_file(name, size);
+    }
+
+    fin.close();
 }
 
 void get_any_file(SOCKET server, const string& filename, long long filesize, ofstream& lout) {
@@ -288,6 +304,8 @@ void Worker::get_file(string filename, unsigned long long offset, unsigned long 
 bool get_download(string filename, string ipAddress, unsigned short port, unsigned long long offset, unsigned long long size, ofstream& lout, clientUI& ui) {
 
     ui.set_file_name(filename);
+    ui.set_total_progress(0);
+    ui.set_combine_progress(0);
 
     vector <Worker*> workers;
     const int num_worker = 4;
@@ -316,6 +334,8 @@ bool get_download(string filename, string ipAddress, unsigned short port, unsign
         // workers[i]->get_file(filename, offset_assigned, chunk, size, i + 1, progress[i]);
 
         target_size[i] = chunk;
+
+        ui.set_chunk_progress(i + 1, 0);
 
         threads.push_back(thread(&Worker::get_file, workers[i], filename, offset_assigned, chunk, size, i + 1, ref(progress[i]), ref(lout)));
  
@@ -354,6 +374,10 @@ bool get_download(string filename, string ipAddress, unsigned short port, unsign
     string destination = "Files/" + filename;
     result.open(destination.c_str(), ios::binary);
 
+    char buffer[RECIEVE_BUFFER_SIZE];
+
+    unsigned long long total_recv = 0;
+
     for (int i = 1; i <= num_worker; i ++) {
         string file_part_name = "[" + to_string(i) + "]#" + filename;
         ifstream fin(file_part_name.c_str(), ios::binary);
@@ -362,7 +386,23 @@ bool get_download(string filename, string ipAddress, unsigned short port, unsign
             return false;
         }
 
-        result << fin.rdbuf();
+
+        unsigned long long total_size = target_size[i - 1];
+        unsigned long long cur = 0;
+
+        while (cur < total_size) {
+            int next = RECIEVE_BUFFER_SIZE;
+            if (cur + next > total_size) {
+                next = total_size - cur;
+            }
+
+            fin.read(buffer, next);
+            result.write(buffer, next);
+            total_recv += next;
+            cur += next;
+            
+            ui.set_combine_progress((double)total_recv / (double)size * 100);
+        }
 
         fin.close();
         remove(file_part_name.c_str());

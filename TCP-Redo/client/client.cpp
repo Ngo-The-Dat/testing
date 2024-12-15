@@ -45,7 +45,10 @@ public:
         : serverIp(serverIp), serverPort(serverPort), socketHandle(INVALID_SOCKET) {}
 
     ~Client() {
+        
+        short_message quit = make_short_message("QUIT");
         if (socketHandle != INVALID_SOCKET) {
+            send(socketHandle, reinterpret_cast<char*>(&quit), sizeof(short_message), 0);
             closesocket(socketHandle);
         }
         WSACleanup();
@@ -101,22 +104,35 @@ public:
 
 //        signal(SIGINT, exit_on_signal);
         
-        ui.set_server_info(serverIp, serverPort);    
+        ui.set_server_info(serverIp, serverPort); 
+        ui.set_chunk_progress(1, 0);
+        ui.set_chunk_progress(2, 0);
+        ui.set_chunk_progress(3, 0);
+        ui.set_chunk_progress(4, 0);
+        ui.set_total_progress(0);
+        ui.set_combine_progress(0);
+        ui.set_file_name("  None  ");
+
         ofstream lout("system.log");
+
+
+        get_file_list(socketHandle, lout, ui);
+
+
         thread render_ui(call_render_ui, ref(ui));        
         signal(SIGINT, exit_on_signal);
 
         do {
             if (!compare_file_set(downloaded_files, "input.txt")) {
-                get_file_list(socketHandle, lout);
+                ui.set_message("[Please wait for the file to download]");
+                get_file_list(socketHandle, lout, ui);
                 handle_download(socketHandle, serverIp, serverPort, downloaded_files, lout, ui);
                 lout << "Press ctrl + c to exit\n";
             } else {
                 // this thread sleep for a while
                 // Sleep(250);
-
+                ui.set_message("[Press 'ctrl' + 'c' to disconnect]");
                 std::this_thread::sleep_for(std::chrono::milliseconds(250));
-
             }
         } while (currstate == RUNNING);
 
@@ -149,6 +165,7 @@ int main(int argc, char* argv[]) {
         client.initialize();
         client.connectToServer();
         client.run();
+
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
         return 1;

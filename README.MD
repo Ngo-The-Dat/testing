@@ -108,3 +108,5 @@ After create 4 workers -> let master sleep for some time -> after that check the
 - [x] complete UI
 - [ ] report the protocols and idea
 - [ ] clean the server log
+- [x] progress bar for concating files
+- [x] read small size chunk -> utilize the most of cache -> currently use << rbuff
