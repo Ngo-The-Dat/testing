@@ -15,6 +15,12 @@ cd ./TCP-Redo
 // or ./build server
 ```
 
+**Prepare:**
+
+Before using the server, you need to put the files you want to share in the `./server/Files` folder. The server will read the files in this folder and send the list to the client. If the folder `Files` does not exist, you need to create it and put the files in it.
+
+About the client, the file will auto download to the `./client/Files` folder. If the folder does not exist the program will create it.
+
 **Run server:**
 
 ```bat
