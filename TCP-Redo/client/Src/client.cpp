@@ -133,13 +133,9 @@ public:
                 // get_file_list(socketHandle, lout, ui);
                 ui.set_message("[Please wait for the file to download]");   
                 handle_download(socketHandle, serverIp, serverPort, downloaded_files, lout, ui);
-                lout << "Press ctrl + c to exit\n";
-            } else {
-                // this thread sleep for a while
-                // Sleep(250);
                 ui.set_message("[Press 'ctrl' + 'c' to disconnect]");
+                lout << "Press ctrl + c to exit\n";
             }
-
             clock.join();
         } while (currstate == RUNNING);
 

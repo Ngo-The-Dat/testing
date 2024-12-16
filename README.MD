@@ -32,72 +32,21 @@ cd ./server
 // from TCP
 cd ./client
 ./client.exe <ip> <port>
-
 ```
 
-## Demo
+## Client UI
 
-After run the client, Ex: ./client.exe 192.168.20.103 8888, and assumes that the server is listening on port 8888, you will see the client interface
+![alt text](Picture/UI.png)
 
-```powershell
+The UI is a simple Terminal UI, it will show the progress of the download and the download speed. Also the time remaining for next time it scans the `input.txt`.
 
-[Connected to 192.168.20.103:8888]
+When the client start the program, set says using the command `./client 192.168.20.103 8888`, it first fetch the available files from the server, shows to the user. then it will start downloading the files. The files will be saved in the `./client/Files` folder.
 
+![alt text](Picture/noti.png)
 
-                                ---   WELCOME   ---
+When the file is dowloaded, notify will tell the user can press ctrl + c to exit the program. While it download, it will tell the user wait for the program to download.
 
-[Server]:       Welcome to the server! you are client 0
-
-                                -------------------
-
-Command: [list] or [download] (ex: list)
-[Choice]:
-
-```
-
-**Client commands:**
-
-- `list`: Get the list of files that server can serve;
-
-- `download`: Request to download a file in the list by file name, to see the list of download-able files, you need to request the list first by run `list`. After that you can choose the file to download by specify the name of the file.
-
-**Download option:**
-
-After you chose download, some file will appear along with there size in byte. And you choose which file to download at this step.
-
-```powershell
-Command: [list] or [download] (ex: list)
-[Choice]: download
-Filename & size: cat.jpg                77456
-Filename & size: file1.txt              9
-Filename & size: image.png              51192
-Filename & size: image2.png             64270
-Filename & size: Matcha.pdf             47314780
-[Choice]:
-
-```
-
-Suppose you downloaded `cat.jpq`, here is the output
-
-```powershell
-[Choice]: cat.jpg
-recieving...
-entered
-216 216
-getting the file: cat.jpg
-send get list
-i got the file
-```
-
-## Worker
-
-Create 4 workers at client site
-
-**Protocols:**
-
-After create 4 workers -> let master sleep for some time -> after that check the progress -> throught file?    
-
-
+## Protocols
 
 ---
 
