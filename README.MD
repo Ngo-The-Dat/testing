@@ -263,6 +263,6 @@ Worker sockets are used to serve file chunks for multi-threaded downloads. This 
 - [ ] clean the server log
 - [x] progress bar for concating files
 - [x] read small size chunk -> utilize the most of cache -> currently use << rbuff
-- [ ] add total byte downloaded.
+- [x] add total byte downloaded.
 - [x] dowload file with space in name.
   
