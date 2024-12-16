@@ -206,6 +206,8 @@ public:
     int base_row = 0;
     Window& window;
     vector <pair<string, int>> buffer;
+    
+    int cur_sep_id = 0; 
 
     void set_window(Window& w) {
         window = w;
@@ -364,6 +366,42 @@ public:
         for (int i = 42; i < 70; i ++) atribute[i] = (progress < 100 ? FOREGROUND_RED : FOREGROUND_GREEN) |  FOREGROUND_INTENSITY;
 
         window.set_buffer_atribute(11 + base_row, atribute);
+    }
+
+    void set_recv_over_total(unsigned long long recv, unsigned long long total) {
+        vector <char> separator = {'|', '/', '-', '\\'}; 
+        
+        auto convert_unit = [](unsigned long long size) {
+            string unit = "B";
+            double s = size;
+
+            if (s >= 1024) {
+                s /= 1024;
+                unit = "KB";
+            }
+
+            if (s >= 1024) {
+                s /= 1024;
+                unit = "MB";
+            }
+
+            if (s >= 1024) {
+                s /= 1024;
+                unit = "GB";
+            }
+
+            unsigned long long x = s * 100;
+
+            return to_string(x / 100) + "." + to_string(x % 100) + " " + unit;
+        };
+        
+        int id = cur_sep_id / 5;
+        if (id >= 4) id = 0, cur_sep_id = 0;
+        
+        string pre = buffer[5].first;
+        buffer[5].first = "Progress: " + convert_unit(recv) + " " + separator[id] + " " + convert_unit(total);
+        cur_sep_id ++;
+        
     }
 
     void set_combine_progress(int progress) {
@@ -600,6 +638,10 @@ public:
 
     void set_next_update(int time) {
         a.set_next_update(time);
+    }
+
+    void set_recv_over_total(unsigned long long recv, unsigned long long total) {
+        d.set_recv_over_total(recv, total);
     }
 
     void display() {

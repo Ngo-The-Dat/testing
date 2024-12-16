@@ -40,3 +40,23 @@ bool check_download_file(const string& filename) {
     }
     return false;
 }
+
+bool get_filename_size(string& name, unsigned long long& size, ifstream& fin) {
+    if (!fin.is_open()) {
+        return false;
+    }
+
+    string line;
+    getline(fin, line);
+
+    if (line.empty()) {
+        return false;
+    }
+
+    size_t pos = line.find_last_of(' ');
+    name = line.substr(0, pos);
+    size = stoull(line.substr(pos + 1));
+
+    return true;
+
+}

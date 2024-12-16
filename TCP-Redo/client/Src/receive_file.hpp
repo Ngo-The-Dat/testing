@@ -88,7 +88,7 @@ void get_file_list(SOCKET server, ofstream& lout, clientUI& ui) {
     string name; 
     unsigned long long size;
 
-    while (fin >> name >> size) {
+    while (get_filename_size(name,size, fin)) { // FIX THIS
         ui.add_file(name, size);
     }
 
@@ -148,8 +148,8 @@ void handle_download(SOCKET server, string serverIp, unsigned short serverPort, 
     map <string, long long> filelist;
 
     string name;
-    long long size;
-    while (fin >> name >> size) {
+    unsigned long long size;
+    while (get_filename_size(name, size, fin)) { // FIX THIS
         filelist[name] = size;
         lout << "Filename & size: " << name << "\t\t" << size << '\n';
     }
@@ -167,7 +167,7 @@ void handle_download(SOCKET server, string serverIp, unsigned short serverPort, 
     }
 
     int i = 0;
-    while (fin >> name) {
+    while (getline(fin, name)) { // FIX THIS
         if (i < downloaded_files.size()) {
             i++; continue;
         }
@@ -346,6 +346,7 @@ bool get_download(string filename, string ipAddress, unsigned short port, unsign
             lout << "Progress " << i + 1 << ": " << percent << 
             "%\t\t size: " << progress[i] << '/' << target_size[i] << '\n';
             ui.set_chunk_progress(i + 1, percent);
+            ui.set_recv_over_total(total_progress, size);
         }
 
         ui.set_total_progress((double)total_progress / (double)size * 100);
