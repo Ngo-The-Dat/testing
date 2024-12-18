@@ -92,7 +92,12 @@ template <typename T>
 int recv(T& data, SOCKET& server, const string& error_message) {
     
     char buffer[RECIEVE_BUFFER_SIZE];
-    int res = recv(server, buffer, sizeof(T), 0);
+    int res = 0;
+    int sizeR = sizeof(T);
+    while (res < sizeR) {
+        res += recv(server, buffer + res, sizeR - res, 0);
+    }
+
 
 
     if (res < 0) {

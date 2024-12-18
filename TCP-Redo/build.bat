@@ -15,6 +15,8 @@ if "%1"=="all" (
     goto :eof
 )
 
+set folder1=./Files
+
 :: Build client
 if "%1"=="client" (
     echo Compiling client...
@@ -22,6 +24,14 @@ if "%1"=="client" (
     %CC% ./Src/client.cpp -lws2_32  %CSC% -o client.exe
     if errorlevel 1 exit /b 1
     echo Client compiled successfully.
+
+    if not exist "%folder1%" (
+        echo Creating folder: %folder1%
+        mkdir "%folder1%"
+    ) else (
+        echo Folder already exists: %folder1%
+    )
+
     cd ..
     goto :eof
 )
@@ -33,6 +43,15 @@ if "%1"=="server" (
     %CC% ./Src/server.cpp -lws2_32 %CSC% -o server.exe
     if errorlevel 1 exit /b 1
     echo Server compiled successfully.
+
+    if not exist "%folder1%" (
+        echo Creating folder: %folder1%
+        mkdir "%folder1%"
+    ) else (
+        echo Folder already exists: %folder1%
+    )
+
+
     cd ..
     goto :eof
 )
